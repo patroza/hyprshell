@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.8.0](https://github.com/H3rmt/hyprshell/compare/v4.7.2...v4.8.0) (2025-10-18)
+
+
+### Features
+
+* Add vim navigation to the switcher ([#360](https://github.com/H3rmt/hyprshell/issues/360)) ([cc0797d](https://github.com/H3rmt/hyprshell/commit/cc0797d8f18a970170619ad3b8e17ca8646d8d93))
+
+
+### Bug Fixes
+
+* **nix-flake:** update flake.lock ([67e720e](https://github.com/H3rmt/hyprshell/commit/67e720e953bfcd0e30fa53ba9abafbaf2dff8cd7))
+
 ## [4.7.2](https://github.com/H3rmt/hyprshell/compare/v4.7.1...v4.7.2) (2025-10-14)
 
 
