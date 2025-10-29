@@ -88,11 +88,11 @@ pub fn configure(dir: &TempDir, config: &PluginConfig) -> anyhow::Result<()> {
         ),
         (
             "$HYPRSHELL_OPEN_SWITCH$",
-            &generate_transfer(&TransferType::OpenSwitch(OpenSwitch { reverse: false })),
+            &generate_transfer(&TransferType::OpenSwitch(OpenSwitch { reverse: false, all: true })),
         ),
         (
             "$HYPRSHELL_OPEN_SWITCH_REVERSE$",
-            &generate_transfer(&TransferType::OpenSwitch(OpenSwitch { reverse: true })),
+            &generate_transfer(&TransferType::OpenSwitch(OpenSwitch { reverse: false, all: false })),
         ),
     ] {
         buffer = buffer.replace(replace.0, replace.1);

@@ -23,6 +23,7 @@ pub enum TransferType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenSwitch {
     pub reverse: bool,
+    pub all: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

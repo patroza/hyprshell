@@ -16,19 +16,19 @@ pub fn generate_open_keybinds(windows: &Windows) -> Vec<ExecBind> {
         binds.push(ExecBind {
             mods: vec![switch.modifier.to_str()],
             key: Box::from("tab"),
-            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: false }))
+            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: false, all: true }))
                 .into_boxed_str(),
         });
         binds.push(ExecBind {
             mods: vec![switch.modifier.to_str()],
             key: Box::from("grave"),
-            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: true }))
+            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: false, all: false, }))
                 .into_boxed_str(),
         });
         binds.push(ExecBind {
             mods: vec![switch.modifier.to_str(), "shift"],
             key: Box::from("tab"),
-            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: true }))
+            exec: generate_transfer_socat(&TransferType::OpenSwitch(OpenSwitch { reverse: false, all: false }))
                 .into_boxed_str(),
         });
     }

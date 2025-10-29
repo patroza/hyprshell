@@ -28,7 +28,7 @@ pub fn open_switch(data: &mut WindowsSwitchData, config: &OpenSwitch) -> anyhow:
 
     let (clients_data, active_prev) = collect_data(&SortConfig {
         filter_current_monitor: data.config.filter_current_monitor,
-        filter_current_workspace: data.config.filter_current_workspace,
+        filter_current_workspace: if config.all { false } else { data.config.filter_current_workspace },
         filter_same_class: data.config.filter_same_class,
         sort_recent: true,
     })
