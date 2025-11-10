@@ -12,5 +12,5 @@
 
 #define HYPRSHELL_CLOSE R"("CloseSwitch")"
 #define HYPRSHELL_OPEN_OVERVIEW R"("OpenOverview")"
-#define HYPRSHELL_OPEN_SWITCH R"({"OpenSwitch":{"reverse":true}})"
-#define HYPRSHELL_OPEN_SWITCH_REVERSE R"({"OpenSwitch":{"reverse":false}})"
+#define HYPRSHELL_OPEN_SWITCH R"({"OpenSwitch":{"reverse":true, "all": true}})"
+#define HYPRSHELL_OPEN_SWITCH_REVERSE R"({"OpenSwitch":{"reverse":false, "all": true}})"
