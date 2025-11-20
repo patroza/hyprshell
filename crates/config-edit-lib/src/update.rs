@@ -24,7 +24,8 @@ pub fn update_config(gtk_config: &GTKConfig, config: &Config) {
                 .set_value(f64::from(windows.items_per_row));
         }
         update_overview(&g_windows.overview, windows.overview.as_ref(), view_stack);
-        update_switch(&g_windows.switch, windows.switch.as_ref());
+        // TODO: support multiple switches
+        update_switch(&g_windows.switch, windows.switch.first());
     } else {
         g_windows.row.set_enable_expansion(false);
         update_overview(&g_windows.overview, None, view_stack);
@@ -69,10 +70,6 @@ fn update_overview(g_overview: &GTKOverview, overview: Option<&Overview>, view_s
             g_overview.modifier.set_selected(desired_modifier);
         }
         update_windows_filter(&g_overview.filter, &overview.filter_by);
-        if g_overview.hide_filtered.is_active() != overview.hide_filtered {
-            g_overview.hide_filtered.set_active(overview.hide_filtered);
-        }
-
         update_launcher(&g_overview.launcher, Some(&overview.launcher), view_stack);
     } else {
         g_overview.row.set_enable_expansion(false);

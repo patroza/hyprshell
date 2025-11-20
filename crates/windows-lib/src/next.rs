@@ -18,7 +18,12 @@ pub fn find_next_workspace(
         debug!("No workspaces available, returning None");
         return active;
     }
-    if hypr_data.workspaces.len() == 1 {
+    let filtered = hypr_data
+        .workspaces
+        .iter()
+        .filter(|(_, data)| data.any_client_enabled)
+        .collect::<Vec<_>>();
+    if filtered.len() == 1 {
         trace!("Only one workspaces available, returning current workspaces");
         let workspaces = &hypr_data.workspaces[0];
         return Active {
@@ -27,11 +32,6 @@ pub fn find_next_workspace(
             monitor: workspaces.1.monitor,
         };
     }
-    let filtered = hypr_data
-        .workspaces
-        .iter()
-        .filter(|(_, data)| data.any_client_enabled)
-        .collect::<Vec<_>>();
     let current = filtered
         .iter()
         .position(|(id, _)| *id == active.workspace)
@@ -41,6 +41,7 @@ pub fn find_next_workspace(
         });
 
     let index = find_next_grid(direction, wrap, filtered.len(), current, workspaces_per_row);
+    #[allow(clippy::map_unwrap_or)]
     let next_active = filtered
         .get(index)
         .map(|(id, data)| Active {
@@ -48,7 +49,11 @@ pub fn find_next_workspace(
             workspace: *id,
             monitor: data.monitor,
         })
-        .expect("unable to find next workspace!");
+        .unwrap_or_else(|| {
+            warn!("Unable to find next workspace, returning current workspace");
+            active
+        });
+    // .expect("unable to find next workspace!");
     trace!("Next active: {next_active:?}");
     next_active
 }
@@ -70,15 +75,6 @@ pub fn find_next_client(
         debug!("No clients available, returning None");
         return active;
     }
-    if hypr_data.clients.len() == 1 {
-        trace!("Only one client available, returning current client");
-        let client = &hypr_data.clients[0];
-        return Active {
-            client: Some(client.0),
-            workspace: client.1.workspace,
-            monitor: client.1.monitor,
-        };
-    }
 
     #[allow(clippy::option_if_let_else)]
     let next_active = match active.client {
@@ -89,11 +85,21 @@ pub fn find_next_client(
                 .iter()
                 .filter(|(_, data)| data.enabled)
                 .collect::<Vec<_>>();
+            if filtered.len() == 1 {
+                trace!("Only one client available, returning current client");
+                let client = &hypr_data.clients[0];
+                return Active {
+                    client: Some(client.0),
+                    workspace: client.1.workspace,
+                    monitor: client.1.monitor,
+                };
+            }
             let current = filtered
                 .iter()
                 .position(|(id, _)| *id == client_id)
                 .unwrap_or(0);
             let index = find_next_grid(direction, wrap, filtered.len(), current, clients_per_row);
+            #[allow(clippy::map_unwrap_or)]
             filtered
                 .get(index)
                 .map(|(id, data)| Active {
@@ -101,7 +107,10 @@ pub fn find_next_client(
                     workspace: data.workspace,
                     monitor: data.monitor,
                 })
-                .expect("unable to find next client!")
+                .unwrap_or_else(|| {
+                    warn!("Unable to find next client, returning current client");
+                    active
+                })
         }
     };
 
@@ -227,6 +236,7 @@ mod tests {
     fn create_test_data(
         client_count: usize,
         workspace_count: usize,
+        enabled: Option<usize>,
     ) -> (
         Vec<(ClientId, ClientData)>,
         Vec<(WorkspaceId, WorkspaceData)>,
@@ -247,7 +257,8 @@ mod tests {
                         monitor: 0,
                         focus_history_id: 0,
                         floating: false,
-                        enabled: true,
+                        #[allow(clippy::map_unwrap_or)]
+                        enabled: enabled.map(|s| s >= i).unwrap_or(true),
                         pid: 0,
                     },
                 )
@@ -264,7 +275,9 @@ mod tests {
                         width: 0,
                         height: 0,
                         monitor: 0,
-                        any_client_enabled: clients.iter().any(|(_, c)| c.enabled),
+                        any_client_enabled: clients
+                            .iter()
+                            .any(|(_, c)| c.workspace == i as WorkspaceId && c.enabled),
                     },
                 )
             })
@@ -276,7 +289,7 @@ mod tests {
     #[test_log::test]
     #[test_log(default_log_filter = "trace")]
     fn test_find_next_workspace_0() {
-        let (clients, workspaces) = create_test_data(0, 0);
+        let (clients, workspaces) = create_test_data(0, 0, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,
@@ -309,8 +322,58 @@ mod tests {
 
     #[test_log::test]
     #[test_log(default_log_filter = "trace")]
+    fn test_find_next_workspace_1_filter() {
+        let (clients, workspaces) = create_test_data(2, 1, Some(0));
+        let hypr_data = HyprlandData {
+            clients,
+            workspaces,
+            monitors: vec![],
+        };
+        let active = Active {
+            client: None,
+            workspace: 0,
+            monitor: 0,
+        };
+        trace!("data: {hypr_data:?}");
+
+        assert_eq!(
+            find_next_workspace(&Direction::Right, true, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Left, true, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Up, true, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Down, true, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Right, false, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Left, false, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Up, false, &hypr_data, active, 3),
+            active
+        );
+        assert_eq!(
+            find_next_workspace(&Direction::Down, false, &hypr_data, active, 3),
+            active
+        );
+    }
+
+    #[test_log::test]
+    #[test_log(default_log_filter = "trace")]
     fn test_find_next_workspace_1() {
-        let (clients, workspaces) = create_test_data(1, 1);
+        let (clients, workspaces) = create_test_data(1, 1, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,
@@ -359,7 +422,7 @@ mod tests {
     #[test_log::test]
     #[test_log(default_log_filter = "trace")]
     fn test_find_next_workspace_2() {
-        let (clients, workspaces) = create_test_data(5, 5);
+        let (clients, workspaces) = create_test_data(5, 5, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,
@@ -395,9 +458,46 @@ mod tests {
 
     #[test_log::test]
     #[test_log(default_log_filter = "trace")]
+    fn test_find_next_workspace_2_filter() {
+        let (clients, workspaces) = create_test_data(5, 5, Some(2));
+        let hypr_data = HyprlandData {
+            clients,
+            workspaces,
+            monitors: vec![],
+        };
+        let active = Active {
+            client: None,
+            workspace: 0,
+            monitor: 0,
+        };
+        trace!("data: {hypr_data:?}");
+
+        let next = find_next_workspace(&Direction::Right, true, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 1);
+        let next = find_next_workspace(&Direction::Left, true, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 2);
+
+        let next = find_next_workspace(&Direction::Up, true, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 0);
+        let next = find_next_workspace(&Direction::Down, true, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 0);
+
+        let next = find_next_workspace(&Direction::Right, false, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 1);
+        let next = find_next_workspace(&Direction::Left, false, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 0);
+
+        let next = find_next_workspace(&Direction::Up, false, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 0);
+        let next = find_next_workspace(&Direction::Down, false, &hypr_data, active, 3);
+        assert_eq!(next.workspace, 2);
+    }
+
+    #[test_log::test]
+    #[test_log(default_log_filter = "trace")]
     fn test_find_next_client() {
         // Test with no clients
-        let (clients, workspaces) = create_test_data(0, 1);
+        let (clients, workspaces) = create_test_data(0, 1, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,
@@ -416,7 +516,7 @@ mod tests {
         );
 
         // Test with one client
-        let (clients, workspaces) = create_test_data(1, 1);
+        let (clients, workspaces) = create_test_data(1, 1, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,
@@ -435,7 +535,7 @@ mod tests {
         );
 
         // Test with multiple clients
-        let (clients, workspaces) = create_test_data(4, 2);
+        let (clients, workspaces) = create_test_data(4, 2, None);
         let hypr_data = HyprlandData {
             clients,
             workspaces,

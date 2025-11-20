@@ -1,7 +1,7 @@
 [package]
 name = "hyprshell-core-lib"
 documentation = "https://docs.rs/hyprshell-core-lib"
-version = "4.8.0"
+version = "4.8.1"
 edition.workspace = true
 description.workspace = true
 license.workspace = true
@@ -13,10 +13,11 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 tracing.workspace = true
-config-lib.workspace = true
+#config-lib.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 notify = { version = "8.2.0", features = [], default-features = false }
+notify-rust = { version = "4.11.7", features = ["zbus"] }
 
 [features]
 json5_config = []

@@ -1,17 +1,17 @@
 use crate::global::{WindowsSwitchConfig, WindowsSwitchData};
-use adw::gtk::gdk::Key;
+use anyhow::Context;
+use async_channel::Sender;
+use config_lib::{FilterBy, Modifier, Switch, Windows};
+use core_lib::transfer::{CloseSwitchConfig, Direction, SwitchSwitchConfig, TransferType};
+use core_lib::{HyprlandData, SWITCH_NAMESPACE, WarnWithDetails};
+use exec_lib::get_initial_active;
+use adw::gtk::gdk::{Key};
 use adw::gtk::glib::Propagation;
 use adw::gtk::prelude::*;
 use adw::gtk::{
     Application, ApplicationWindow, EventControllerKey, FlowBox, Orientation, Overlay,
     SelectionMode,
 };
-use anyhow::Context;
-use async_channel::Sender;
-use config_lib::{FilterBy, Modifier, Switch, Windows};
-use core_lib::transfer::{Direction, SwitchSwitchConfig, TransferType};
-use core_lib::{HyprlandData, SWITCH_NAMESPACE, WarnWithDetails};
-use exec_lib::get_initial_active;
 use gtk4_layer_shell::{KeyboardMode, Layer, LayerShell};
 use std::collections::HashMap;
 use tracing::{debug, debug_span};
@@ -46,11 +46,12 @@ pub fn create_windows_switch_window(
 
     let key_controller = EventControllerKey::new();
     let event_sender_2 = event_sender.clone();
+    let modifier = switch.modifier;
     key_controller.connect_key_pressed(move |_, key, _, _| handle_key(key, &event_sender_2));
     let event_sender_3 = event_sender;
-    let r#mod = switch.modifier;
+    let switch_key_2 = switch.key.clone();
     key_controller.connect_key_released(move |_, key, _, _| {
-        handle_release(key, r#mod, &event_sender_3);
+        handle_release(key, &switch_key_2, modifier, &event_sender_3);
     });
     window.add_controller(key_controller);
 
@@ -73,6 +74,8 @@ pub fn create_windows_switch_window(
             filter_current_monitor: switch.filter_by.contains(&FilterBy::CurrentMonitor),
             filter_same_class: switch.filter_by.contains(&FilterBy::SameClass),
             switch_workspaces: switch.switch_workspaces,
+            key: switch.key.clone(),
+            modifier: switch.modifier.to_string().to_lowercase().into(),
         },
         window,
         main_flow: clients_flow,
@@ -83,13 +86,16 @@ pub fn create_windows_switch_window(
     })
 }
 
-fn handle_release(key: Key, modifier: Modifier, event_sender: &Sender<TransferType>) {
-    if ((key == Key::Alt_L || key == Key::Alt_R) && modifier == Modifier::Alt)
-        || ((key == Key::Control_L || key == Key::Control_R) && modifier == Modifier::Ctrl)
-        || ((key == Key::Super_L || key == Key::Super_R) && modifier == Modifier::Super)
+fn handle_release(key: Key, switch_key: &Box<str>, switch_mod: Modifier, event_sender: &Sender<TransferType>) {
+    if ((key == Key::Alt_L || key == Key::Alt_R) && switch_mod == Modifier::Alt)
+        || ((key == Key::Control_L || key == Key::Control_R) && switch_mod == Modifier::Ctrl)
+        || ((key == Key::Super_L || key == Key::Super_R) && switch_mod == Modifier::Super)
     {
         event_sender
-            .send_blocking(TransferType::CloseSwitch)
+            .send_blocking(TransferType::CloseSwitch(CloseSwitchConfig { 
+                modifier: switch_mod.to_string().to_lowercase().into(),
+                key: switch_key.clone(),
+            }))
             .warn_details("unable to send");
     }
 }

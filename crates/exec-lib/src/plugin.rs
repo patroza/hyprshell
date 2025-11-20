@@ -4,7 +4,7 @@ use hyprland::ctl::plugin;
 use hyprland_plugin::PluginConfig;
 use std::path::Path;
 use std::sync::OnceLock;
-use tracing::{debug, debug_span, trace};
+use tracing::{debug, debug_span, info, trace};
 
 // info: trying to load a plugin causes hyprland to issue a reload
 // this will cause hyprshell to restart.
@@ -13,7 +13,7 @@ use tracing::{debug, debug_span, trace};
 static PLUGIN_COULD_BE_BUILD: OnceLock<bool> = OnceLock::new();
 
 pub fn load_plugin(
-    switch: Option<Modifier>,
+    switch: Vec<Modifier>,
     overview: Option<(Modifier, Box<str>)>,
 ) -> anyhow::Result<()> {
     let _span = debug_span!("load_plugin").entered();
@@ -23,7 +23,7 @@ pub fn load_plugin(
     }
 
     let config = PluginConfig {
-        xkb_key_switch_mod: switch.map(|s| Box::from(mod_to_xkb_key(s))),
+        xkb_key_switch_mod: switch.iter().map(|s| Box::from(mod_to_xkb_key(*s))).collect(),
         xkb_key_overview_mod: overview
             .as_ref()
             .map(|(r#mod, _)| Box::from(r#mod.to_string())),
@@ -32,6 +32,7 @@ pub fn load_plugin(
 
     if check_new_plugin_needed(&config) {
         unload().context("unable to unload old plugin")?;
+        info!("building plugin, this may take a while, please wait");
         hyprland_plugin::generate(&config).context("unable to generate plugin")?;
         trace!(
             "generated plugin at {:?}",

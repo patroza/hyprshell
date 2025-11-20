@@ -30,12 +30,11 @@ pub fn load_and_migrate_config(config_path: &Path, allow_migrate: bool) -> anyho
                 return Ok(config);
             }
             Err(err) => {
-                warn!("Migration failed: \n{err:?}");
+                bail!("Config migration failed: \n{err:?}");
             }
         }
-    } else {
-        trace!("No migration needed");
     }
+    trace!("No migration needed");
 
     let config: Config = load_config_file(config_path).with_context(|| {
         format!(
@@ -92,8 +91,7 @@ pub fn load_config_file<T: DeserializeOwned>(config_path: &Path) -> anyhow::Resu
             toml::from_str(&content).context("Failed to parse TOML config")
         }
         Some(ext) => bail!(
-            "Invalid config file extension: {} (run with -vv and check `FEATURES: ` debug log to see enabled extensions)",
-            ext
+            "Invalid config file extension: {ext} (run with -vv and check `FEATURES: ` debug log to see enabled extensions)"
         ),
     }
 }

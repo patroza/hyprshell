@@ -1,3 +1,4 @@
+use crate::explain::explain_config;
 use anyhow::{Context, bail};
 use clap::Parser;
 use core_lib::WarnWithDetails;
@@ -21,6 +22,7 @@ mod completions;
 mod debug;
 #[cfg(feature = "debug_command")]
 mod default_apps;
+mod explain;
 
 #[allow(clippy::too_many_lines)]
 fn main() -> anyhow::Result<()> {
@@ -65,11 +67,11 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         cli::Command::Run {} => {
+            exec_lib::check_version()
+                .warn_details("Unable to check hyprland version, continuing anyway");
             if daemon_running() {
                 bail!("Daemon already running");
             }
-            exec_lib::check_version()
-                .warn_details("Unable to check hyprland version, continuing anyway");
             if env::var_os("HYPRSHELL_EXPERIMENTAL").is_some_and(|v| v.eq("1")) {
                 clipboard_lib::store::test_clipboard(
                     cache_dir.unwrap_or_else(get_default_cache_dir),
@@ -119,13 +121,10 @@ fn main() -> anyhow::Result<()> {
                     )
                     .warn();
                 }
-                core_lib::util::explain_config(&config_path, true);
+                explain_config(&config_path, true);
             }
             cli::ConfigCommand::Explain {} => {
-                core_lib::util::explain_config(
-                    &config_path.unwrap_or_else(get_default_config_path),
-                    false,
-                );
+                explain_config(&config_path.unwrap_or_else(get_default_config_path), false);
             }
             cli::ConfigCommand::Check {} => {
                 if let Err(err) = config_lib::load_and_migrate_config(
@@ -161,7 +160,7 @@ fn main() -> anyhow::Result<()> {
                 let config_all = config_lib::Config {
                     windows: Some(config_lib::Windows {
                         overview: Some(config_lib::Overview::default()),
-                        switch: Some(config_lib::Switch::default()),
+                        switch: vec![config_lib::Switch::default()],
                         ..Default::default()
                     }),
                     ..Default::default()
